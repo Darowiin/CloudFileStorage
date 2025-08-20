@@ -1,0 +1,41 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1755707161979-1
+      author: Darowiin
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            columns:
+              - column:
+                  name: username
+                  type: VARCHAR(20)
+            tableName: users
+  - changeSet:
+      id: 1755707161979-2
+      author: Darowiin
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addNotNullConstraint:
+            columnName: username
+            tableName: users
+  - changeSet:
+      id: 1755707161979-3
+      author: Darowiin
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addUniqueConstraint:
+            columnNames: username
+            constraintName: uc_users_username
+            tableName: users
+  - changeSet:
+      id: 1755707161979-5
+      author: Darowiin
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - dropColumn:
+            columnName: email
+            tableName: users
+        - dropColumn:
+            columnName: name
+            tableName: users
+
