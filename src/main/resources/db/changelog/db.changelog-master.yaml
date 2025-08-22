@@ -1,41 +1,30 @@
 databaseChangeLog:
   - changeSet:
-      id: 1755707161979-1
+      id: 1
       author: Darowiin
-      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
       changes:
-        - addColumn:
+        - createTable:
+            tableName: users
             columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
               - column:
                   name: username
                   type: VARCHAR(20)
-            tableName: users
-  - changeSet:
-      id: 1755707161979-2
-      author: Darowiin
-      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
-      changes:
-        - addNotNullConstraint:
-            columnName: username
-            tableName: users
-  - changeSet:
-      id: 1755707161979-3
-      author: Darowiin
-      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
-      changes:
-        - addUniqueConstraint:
-            columnNames: username
-            constraintName: uc_users_username
-            tableName: users
-  - changeSet:
-      id: 1755707161979-5
-      author: Darowiin
-      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
-      changes:
-        - dropColumn:
-            columnName: email
-            tableName: users
-        - dropColumn:
-            columnName: name
-            tableName: users
-
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: password
+                  type: VARCHAR(60)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
