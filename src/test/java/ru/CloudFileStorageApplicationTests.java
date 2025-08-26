@@ -19,6 +19,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import ru.service.UserService;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -77,7 +78,7 @@ class CloudFileStorageApplicationTests {
     }
 
     @Test
-    void validationError_ReturnsCorrectCode() throws Exception {
+    void validationError_ReturnsBadRequest() throws Exception {
         MockHttpSession session = new MockHttpSession();
 
         mockMvc.perform(post("/api/auth/sign-up")
@@ -128,4 +129,16 @@ class CloudFileStorageApplicationTests {
                 .andExpect(status().isNoContent());
     }
 
+    @Test
+    void signOut_WithoutMockUser_ReturnsUnauthorized() throws Exception {
+        mockMvc.perform(post("/api/auth/sign-out"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "testuser", roles = "USER")
+    void getUser_WithMockUser_ReturnsOk() throws Exception {
+        mockMvc.perform(get("/api/user/me"))
+                .andExpect(status().isOk());
+    }
 }

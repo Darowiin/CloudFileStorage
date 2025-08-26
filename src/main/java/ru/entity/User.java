@@ -30,12 +30,8 @@ public class User {
     @Column(name = "password", nullable = false, length = 60)
     String password;
 
-    @Column(name = "role", nullable = false)
-    UserRole role;
-
-    public User(String username, String password, UserRole role) {
+    public User(String username, String password) {
         this.username = username;
         this.password = password;
-        this.role = role;
     }
 }
