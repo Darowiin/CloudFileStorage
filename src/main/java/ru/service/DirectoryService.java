@@ -68,7 +68,7 @@ public class DirectoryService {
 
         String fullPath = PathUtils.getFullPath(userId, pathWithSlash);
 
-        if (!parentPath.equals("/")) {
+        if (!parentPath.isEmpty()) {
             String fullParentPath = PathUtils.getFullPath(userId, parentPath);
             if (!isDirectoryExists(fullParentPath)) {
                 throw new ResourceNotFoundException("Parent directory doesn't exists: " + parentPath);

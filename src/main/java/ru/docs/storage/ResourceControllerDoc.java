@@ -129,7 +129,7 @@ public interface ResourceControllerDoc {
     })
     List<ResourceResponse> uploadResource(
             @Parameter(description = "Files to upload", required = true)
-            @RequestPart(value = "file") List<MultipartFile> files,
+            @RequestPart(value = "object") List<MultipartFile> files,
             @Parameter(description = "Target path", required = false)
             @RequestParam(required = false, defaultValue = "") String path,
             @AuthenticationPrincipal CustomUserDetails userDetails);
