@@ -73,8 +73,7 @@ public class StorageService {
     }
 
     public byte[] download(int userId, String path) {
-        String fullPath = PathUtils.getFullPath(userId, path);
-        if (PathUtils.isDirectory(fullPath)) {
+        if (PathUtils.isDirectory(path)) {
             log.info("User: {}, Downloading directory from: {}", userId, path);
             return directoryService.downloadDirectory(userId, path);
         } else {

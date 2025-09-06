@@ -13,7 +13,6 @@ import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
-import org.mapstruct.ap.shaded.freemarker.cache.FileTemplateLoader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -162,7 +161,7 @@ public class ResourceService {
 
                     resources.add(new ResourceResponse(
                             parent,
-                            name,
+                            name + "/",
                             null,
                             ResourceType.DIRECTORY
                     ));
@@ -173,6 +172,9 @@ public class ResourceService {
             if (name.contains(query)) {
                 boolean isDir = item.isDir() || objectName.endsWith("/");
                 ResourceType resourceType = isDir ? ResourceType.DIRECTORY : ResourceType.FILE;
+                if (isDir) {
+                    name = name.endsWith("/") ? name : name + "/";
+                }
                 Long size = isDir ? null : item.size();
                 String path = PathUtils.getParentPath(relativePath);
 

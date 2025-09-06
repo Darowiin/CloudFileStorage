@@ -348,14 +348,10 @@ public class DirectoryService {
                         null,
                         ResourceType.DIRECTORY));
             } else {
-                try (InputStream input = minioClient.getObject(
-                        GetObjectArgs.builder().bucket(bucketName).object(objectName).build())
-                ) {
-                    resources.add(new ResourceResponse(path,
-                            name,
-                            item.size(),
-                            ResourceType.FILE));
-                }
+                resources.add(new ResourceResponse(path,
+                        name,
+                        item.size(),
+                        ResourceType.FILE));
             }
         }
         return resources;
