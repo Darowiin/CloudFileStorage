@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RequestBody;
 import ru.dto.UserForm;
@@ -41,32 +42,7 @@ public interface AuthorizationControllerDoc {
     })
     UserResponse signUp(
             @Parameter(description = "User registration data")
-            @Valid @RequestBody UserForm form,
-            HttpServletRequest request,
-            HttpServletResponse response);
-
-    @Operation(summary = "Log in a user",
-               description = "Authenticates an existing user and establishes a session")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "User successfully authenticated",
-                    content = @Content(mediaType = "application/json",
-                    schema = @Schema(implementation = UserResponse.class,
-                                    example = "{\"username\": \"user_1\"}"))),
-        @ApiResponse(responseCode = "400", description = "Validation error",
-                    content = @Content(mediaType = "application/json",
-                    schema = @Schema(example = "{\"message\": \"password must be not blank\"}"))),
-        @ApiResponse(responseCode = "401", description = "Invalid credentials",
-                    content = @Content(mediaType = "application/json",
-                    schema = @Schema(example = "{\"message\": \"Bad credentials\"}"))),
-        @ApiResponse(responseCode = "500", description = "Internal server error",
-                    content = @Content(mediaType = "application/json",
-                    schema = @Schema(example = "{\"message\": \"Internal server error message\"}")))
-    })
-    UserResponse signIn(
-            @Parameter(description = "User login credentials")
-            @Valid @RequestBody UserForm form,
-            HttpServletRequest request,
-            HttpServletResponse response);
+            @Valid @RequestBody UserForm form);
 
     @Operation(summary = "Log out",
                description = "Terminates the user session")
@@ -80,7 +56,7 @@ public interface AuthorizationControllerDoc {
                     content = @Content(mediaType = "application/json",
                     schema = @Schema(example = "{\"message\": \"Internal server error message\"}")))
     })
-    void logout(HttpServletRequest request, HttpServletResponse response);
+    ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response);
 
     @Operation(summary = "Get current user information",
                description = "Returns information about the currently authenticated user")

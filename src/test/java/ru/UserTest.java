@@ -1,23 +1,27 @@
 package ru;
 
+import jakarta.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
+import org.springframework.test.web.servlet.MvcResult;
+import org.testcontainers.containers.Container.ExecResult;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import ru.config.TestContainersConfig;
+import ru.repository.UserRepository;
 import ru.service.UserService;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -27,28 +31,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Testcontainers
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
-class CloudFileStorageApplicationTests {
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:latest")
-            .withDatabaseName("test")
-            .withUsername("test")
-            .withPassword("test");
-
-    @Container
-    static GenericContainer<?> redis = new GenericContainer<>("redis:latest")
-            .withExposedPorts(6379);
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.data.redis.host", redis::getHost);
-        registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
-    }
+@Import(TestContainersConfig.class)
+class UserTest {
 
     private final UserService userService;
     private final MockMvc mockMvc;
+    private final UserRepository userRepository;
+
+    @BeforeEach
+    void flushRedis() throws Exception {
+        TestContainersConfig.REDIS.execInContainer("redis-cli", "FLUSHALL");
+    }
+
+    @AfterEach
+    void tearDown() {
+        userRepository.deleteAll();
+    }
 
     @Test
     void signUpAndSignIn_WorksCorrect() throws Exception {
@@ -56,12 +54,12 @@ class CloudFileStorageApplicationTests {
 
         mockMvc.perform(post("/api/auth/sign-up")
                         .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"user\",\"password\":\"password\"}")
-                .session(session))
+                        .content("{\"username\":\"user\",\"password\":\"password\"}")
+                        .session(session))
                 .andExpectAll(
-                    status().isCreated(),
-                    content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON),
-                    content().json("{\"username\":\"user\"}")
+                        status().isCreated(),
+                        content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON),
+                        content().json("{\"username\":\"user\"}")
                 );
 
         Assertions.assertTrue(userService.existsByUsernameAndPassword("user", "password"));
@@ -75,6 +73,9 @@ class CloudFileStorageApplicationTests {
                         content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON),
                         content().json("{\"username\":\"user\"}")
                 );
+
+        ExecResult result = TestContainersConfig.REDIS.execInContainer("redis-cli", "keys", "*");
+        Assertions.assertTrue(result.getStdout().contains("spring:session:sessions"));
     }
 
     @Test
@@ -123,22 +124,56 @@ class CloudFileStorageApplicationTests {
     }
 
     @Test
-    @WithMockUser(username = "user")
-    void signOut_WithMockUser_ReturnsNoContent() throws Exception {
-        mockMvc.perform(post("/api/auth/sign-out"))
+    void signOut_WithAuthenticatedUser_RemovesSessionFromRedis() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+
+        mockMvc.perform(post("/api/auth/sign-up")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"user\",\"password\":\"password\"}")
+                        .session(session))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/auth/sign-in")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"user\",\"password\":\"password\"}")
+                        .session(session))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/sign-out")
+                        .with(user("user").roles("USER"))
+                        .session(session))
                 .andExpect(status().isNoContent());
     }
 
+
     @Test
-    void signOut_WithoutMockUser_ReturnsUnauthorized() throws Exception {
+    void signOut_WithoutAuthenticatedUser_ReturnsUnauthorized() throws Exception {
         mockMvc.perform(post("/api/auth/sign-out"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    @WithMockUser(username = "testuser", roles = "USER")
-    void getUser_WithMockUser_ReturnsOk() throws Exception {
-        mockMvc.perform(get("/api/user/me"))
-                .andExpect(status().isOk());
+    void getUser_WithAuthenticatedUser_ReturnsOk() throws Exception {
+
+        mockMvc.perform(post("/api/auth/sign-up")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"testuser\",\"password\":\"password\"}"))
+                .andExpect(status().isCreated());
+
+        MvcResult result = mockMvc.perform(post("/api/auth/sign-in")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"testuser\",\"password\":\"password\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        MockHttpServletResponse response = result.getResponse();
+        String sessionCookie = response.getCookie("SESSION").getValue();
+
+        mockMvc.perform(get("/api/user/me")
+                        .cookie(new Cookie("SESSION", sessionCookie)))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"username\":\"testuser\"}"));
+        ExecResult redisResult = TestContainersConfig.REDIS.execInContainer("redis-cli", "keys", "*");
+        Assertions.assertTrue(redisResult.getStdout().contains("spring:session:sessions"));
     }
 }

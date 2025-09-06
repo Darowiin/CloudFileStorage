@@ -64,7 +64,7 @@ public class ResourceController implements ResourceControllerDoc {
 
     @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     @ResponseStatus(HttpStatus.CREATED)
-    public List<ResourceResponse> uploadResource(@RequestPart(value = "file") List<MultipartFile> files,
+    public List<ResourceResponse> uploadResource(@RequestPart(value = "object") List<MultipartFile> files,
                                             @RequestParam(required = false, defaultValue = "") String path,
                                             @AuthenticationPrincipal CustomUserDetails userDetails) {
         return storageService.upload(files, userDetails.getId(), path);

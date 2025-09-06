@@ -6,14 +6,14 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.context.SecurityContextHolderStrategy;
-import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,63 +23,56 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.docs.auth.AuthorizationControllerDoc;
 import ru.dto.UserForm;
 import ru.dto.UserResponse;
+import ru.exception.ResourceAlreadyExistsException;
 import ru.security.CustomUserDetails;
+import ru.service.StorageService;
 import ru.service.UserService;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping(value = "/api", produces = "application/json")
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class AuthorizationController implements AuthorizationControllerDoc {
     private final UserService userService;
+    private final StorageService storageService;
     private final AuthenticationManager authenticationManager;
-    private final SecurityContextRepository securityContextRepository;
-    private final SecurityContextHolderStrategy securityContextHolderStrategy;
 
     @PostMapping("/auth/sign-up")
+    @ResponseStatus(HttpStatus.CREATED)
     public UserResponse signUp(
-            @Valid @RequestBody UserForm form,
-            HttpServletRequest request,
-            HttpServletResponse response) {
+            @Valid @RequestBody UserForm form) {
         UserResponse user = userService.createUser(form);
 
         UsernamePasswordAuthenticationToken auth =
                 new UsernamePasswordAuthenticationToken(form.username(), form.password());
         Authentication authentication = authenticationManager.authenticate(auth);
 
-        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-        securityContext.setAuthentication(authentication);
-        securityContextHolderStrategy.setContext(securityContext);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        securityContextRepository.saveContext(securityContext, request, response);
+        try {
+            storageService.createDirectory(userService.findByUsername(user.username()).getId(), "");
+        } catch (ResourceAlreadyExistsException ignored) {}
 
         return user;
     }
 
-    @PostMapping("/auth/sign-in")
-    public UserResponse signIn(
-            @Valid @RequestBody UserForm form,
-            HttpServletRequest request,
-            HttpServletResponse response) {
-        UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
-                form.username(),
-                form.password()
-        );
-        Authentication authentication = authenticationManager.authenticate(usernamePasswordAuthenticationToken);
-        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-        securityContextHolderStrategy.setContext(securityContext);
-        securityContext.setAuthentication(authentication);
-
-        securityContextRepository.saveContext(securityContext, request, response);
-        CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
-        return new UserResponse(principal.getUsername());
-    }
-
     @PostMapping("/auth/sign-out")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void logout(HttpServletRequest request, HttpServletResponse response) {
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        securityContextHolderStrategy.setContext(context);
-        securityContextRepository.saveContext(context, request, response);
+    public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth != null && !(auth instanceof AnonymousAuthenticationToken)) {
+            new SecurityContextLogoutHandler().logout(request, response, auth);
+
+            var session = request.getSession(false);
+            if (session != null) {
+                session.invalidate();
+            }
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED)
+                    .body(Map.of("message", "User is not logged in"));
+        }
     }
 
     @GetMapping("/user/me")

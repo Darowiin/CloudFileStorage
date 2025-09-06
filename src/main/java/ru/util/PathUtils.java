@@ -14,15 +14,27 @@ public class PathUtils {
     }
 
     public static String getParentPath(String path) {
+        if (path == null || path.isEmpty() || path.equals("/")) {
+            return "";
+        }
+
         if (path.endsWith("/")) {
             path = path.substring(0, path.length() - 1);
         }
 
         int lastSlash = path.lastIndexOf('/');
-        return lastSlash > 0 ? path.substring(0, lastSlash + 1) : "/";
+        if (lastSlash == -1) {
+            return "";
+        }
+
+        return lastSlash == 0 ? "" : path.substring(0, lastSlash + 1);
     }
 
     public static String getFileName(String path) {
+        if (path == null || path.isEmpty() || path.equals("/")) {
+            return "";
+        }
+
         if (path.endsWith("/")) {
             path = path.substring(0, path.length() - 1);
         }

@@ -27,6 +27,10 @@ public class UserService {
         return user != null && passwordEncoder.matches(password, user.getPassword());
     }
 
+    public User findByUsername(String username) {
+        return userRepository.findByUsernameIgnoreCase(username).orElse(null);
+    }
+
     public UserResponse createUser(UserForm form) {
         return Optional.of(form)
                 .filter(temp -> !userRepository.existsByUsernameIgnoreCase(form.username()))

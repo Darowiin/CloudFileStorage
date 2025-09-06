@@ -13,6 +13,7 @@ import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
+import org.mapstruct.ap.shaded.freemarker.cache.FileTemplateLoader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,7 +26,10 @@ import ru.util.PathUtils;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 
 @Service
@@ -92,7 +96,7 @@ public class ResourceService {
                     PutObjectArgs.builder()
                             .bucket(bucketName)
                             .object(fullToPath)
-                            .stream(inputStream, sourceFile.Size(), -1)
+                            .stream(inputStream, sourceFile.size(), -1)
                             .build());
 
             minioClient.removeObject(
@@ -104,7 +108,7 @@ public class ResourceService {
             return new ResourceResponse(
                     PathUtils.getParentPath(to),
                     PathUtils.getFileName(to),
-                    sourceFile.Size(),
+                    sourceFile.size(),
                     ResourceType.FILE
             );
         } catch (Exception e) {
@@ -122,10 +126,10 @@ public class ResourceService {
             throw new InvalidResourcePathException("The query contains invalid characters: " + query);
         }
 
-        String userDirectory =  PathUtils.getUserDirectory(userId);
+        String userDirectory = PathUtils.getUserDirectory(userId);
         Iterable<Result<Item>> items;
         try {
-             items = minioClient.listObjects(
+            items = minioClient.listObjects(
                     ListObjectsArgs.builder()
                             .bucket(bucketName)
                             .prefix(userDirectory)
@@ -134,19 +138,51 @@ public class ResourceService {
         } catch (Exception ignored) {
             return List.of();
         }
+
+        Set<String> seenDirs = new HashSet<>();
         List<ResourceResponse> resources = new ArrayList<>();
 
         for (Result<Item> result : items) {
             Item item = result.get();
-
             String objectName = item.objectName();
-            String path = PathUtils.getParentPath(objectName);
-            String name = PathUtils.getFileName(objectName);
 
-            if (PathUtils.getFileName(objectName).contains(query)) {
-                resources.add(new ResourceResponse(path, name, item.size(), ResourceType.FILE));
+            String relativePath = objectName.replaceFirst("^" + Pattern.quote(userDirectory), "");
+            if (relativePath.isEmpty()) continue;
+
+            String[] parts = relativePath.split("/");
+
+            StringBuilder prefix = new StringBuilder();
+            for (int i = 0; i < parts.length - 1; i++) {
+                prefix.append(parts[i]).append("/");
+                String dirPath = prefix.toString();
+
+                if (dirPath.contains(query) && seenDirs.add(dirPath)) {
+                    String parent = PathUtils.getParentPath(dirPath);
+                    String name = PathUtils.getFileName(dirPath);
+
+                    resources.add(new ResourceResponse(
+                            parent,
+                            name,
+                            null,
+                            ResourceType.DIRECTORY
+                    ));
+                }
+            }
+
+            String name = PathUtils.getFileName(relativePath);
+            if (name.contains(query)) {
+                boolean isDir = item.isDir() || objectName.endsWith("/");
+                ResourceType resourceType = isDir ? ResourceType.DIRECTORY : ResourceType.FILE;
+                Long size = isDir ? null : item.size();
+                String path = PathUtils.getParentPath(relativePath);
+
+                String key = path + "/" + name;
+                if (seenDirs.add(key)) {
+                    resources.add(new ResourceResponse(path, name, size, resourceType));
+                }
             }
         }
+
         return resources;
     }
 
@@ -181,13 +217,12 @@ public class ResourceService {
         for (MultipartFile file : files) {
 
             String objectName = fullPath + file.getOriginalFilename();
-
             boolean isFileExists = false;
             try {
                 minioClient.statObject(
                         StatObjectArgs.builder()
                                 .bucket(bucketName)
-                                .object(fullPath)
+                                .object(objectName)
                                 .build());
                 isFileExists = true;
             } catch (Exception ignored) {}
