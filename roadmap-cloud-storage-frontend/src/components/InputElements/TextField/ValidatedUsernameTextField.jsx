@@ -21,7 +21,7 @@ export default function ValidatedUsernameTextField({
         let isValid = true;
         let errMessage = '';
 
-        if (value && value.length < 5 && shouldValidate) {
+if (value && value.length < minLength && shouldValidate) {
             errMessage = 'Минимальная длина имени пользователя ' + minLength + ' символов. ';
             isValid = false;
         }
