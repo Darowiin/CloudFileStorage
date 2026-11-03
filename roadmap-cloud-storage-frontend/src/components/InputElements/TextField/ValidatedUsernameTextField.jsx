@@ -29,7 +29,7 @@ export default function ValidatedUsernameTextField({
             errMessage += 'Недопустимые символы в имени пользователя. ';
             isValid = false;
         }
-        if (value && value.length > 20 && shouldValidate) {
+if (value && value.length > maxLength && shouldValidate) {
             errMessage += 'Максимальная длина имени пользователя: ' + maxLength + ' символов. ';
             isValid = false;
         }
