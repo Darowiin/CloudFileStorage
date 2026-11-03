@@ -41,7 +41,7 @@ export async function sendUpload(files, updateDownloadTask, updateTask, uploadTa
     } catch (error) {
         console.log(error);
 
-        if (error.response.status === 409) {
+if (error.response?.status === 409) {
             updateTask(uploadTask, "error", "Файл/папка с таким именем уже существует в целевой папке!");
 
         } else {
