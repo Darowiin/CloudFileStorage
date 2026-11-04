@@ -130,24 +130,40 @@
 
 4. Сервисы будут доступны по адресам:
    - Frontend: http://localhost
-   - Backend: http://localhost:8080
+   - Backend API через frontend: http://localhost/api
+   - Backend напрямую: http://localhost:8080
    - Swagger UI: http://localhost:8080/swagger-ui/index.html
    - RustFS Console: http://localhost:9001
    - RustFS S3 API: http://localhost:9000
 
    Для входа в RustFS Console используйте `RUSTFS_ACCESS_KEY` и `RUSTFS_SECRET_KEY` из `.env`.
 
+   Frontend использует относительный адрес API. Nginx внутри frontend-контейнера
+   проксирует запросы `/api/*` в Docker-сервис `app:8080`. Поэтому браузеру не нужно
+   разрешать имя `app`, доступное только внутри Docker Compose-сети.
+
 ### Запуск для разработки
 
-1. Запустите необходимые сервисы через Docker Compose:
+1. Создайте локальный файл окружения:
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+   Для запуска Spring Boot вне Docker приложение использует значения из `.env`.
+
+2. Запустите необходимые сервисы через Docker Compose:
    ```
    docker compose up -d db redis rustfs
    ```
 
-2. Запустите Spring Boot приложение:
+3. Запустите Spring Boot приложение:
    ```
    .\mvnw.cmd spring-boot:run
    ```
+
+При запуске в Docker `.env` передаётся контейнеру через `env_file`, а Docker-профиль
+использует внутренние адреса `db`, `redis` и `rustfs`. При запуске приложения напрямую
+используются локальные адреса `localhost` из `.env`.
 
 ## 🔧Конфигурация
 
