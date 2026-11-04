@@ -7,9 +7,9 @@ export const FilePageButton = () => {
     const navigate = useNavigate();
     return(
         <Button color="secondary"
+             aria-label="Open files"
              variant="contained"
              onClick={() => navigate("/files")}
-        sx={{
             position: 'fixed',
             display: {xs: 'flex', sm: "none"},
             borderRadius: '50%',

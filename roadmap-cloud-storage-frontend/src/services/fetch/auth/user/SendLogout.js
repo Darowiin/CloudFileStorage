@@ -14,7 +14,7 @@ export const sendLogout = async () => {
     console.log(response);
     if (!response.ok) {
         const error = await response.json();
-        throwSpecifyException(error);
+throwSpecifyException(response.status, error);
     }
 
 }
