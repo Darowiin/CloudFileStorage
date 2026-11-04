@@ -7,6 +7,7 @@ export const FileButton = () => {
     const navigate = useNavigate();
 
     return (
+        <Button
             aria-label="Open files"
             onClick={() => navigate('/files')}
             sx={{

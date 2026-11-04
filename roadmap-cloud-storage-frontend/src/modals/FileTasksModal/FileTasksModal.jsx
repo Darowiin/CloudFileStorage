@@ -80,7 +80,7 @@ export const FileTasksModal = () => {
                 sx={{
                     position: 'relative',
                     marginLeft: 'auto',
-                    width: '80%',
+                    width: '100%',
                     borderTopLeftRadius: 10,
                     border: '1px solid',
                     borderColor: 'divider',
