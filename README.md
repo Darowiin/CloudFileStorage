@@ -34,17 +34,17 @@
 - Swagger / OpenAPI (документация API)
 
 ### Хранилища
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-42-blue?logo=postgresql)
-![MinIO](https://img.shields.io/badge/MinIO-S3-red?logo=minio)
-![Redis](https://img.shields.io/badge/Redis-6.6.0-red?logo=redis)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-blue?logo=postgresql)
+![RustFS](https://img.shields.io/badge/RustFS-S3-red)
+![Redis](https://img.shields.io/badge/Redis-8.10.3-red?logo=redis)
 
 - **PostgreSQL** – реляционная база данных
-- **MinIO** – объектное S3-совместимое хранилище
-- **Redis** – кеш и хранение сессий
+- **RustFS** – S3-совместимое объектное хранилище
+- **Redis** – хранение распределённых HTTP-сессий
 
 ### Тестирование
 ![JUnit](https://img.shields.io/badge/JUnit-5-green?logo=junit5)
-![Testcontainers](https://img.shields.io/badge/Testcontainers-1.21.3-blue?logo=testcontainers)
+![Testcontainers](https://img.shields.io/badge/Testcontainers-blue?logo=testcontainers)
 
 - JUnit 5, Testcontainers (интеграционные и модульные тесты)
 
@@ -58,7 +58,7 @@
 
 ## 🏗 Архитектура
 
-- **Backend** на Spring Boot взаимодействует с PostgreSQL, MinIO и Redis.
+- **Backend** на Spring Boot взаимодействует с PostgreSQL, RustFS и Redis.
 - **Frontend** (React SPA) общается с API через REST.
 - Все сервисы поднимаются в Docker-контейнерах.
 
@@ -111,36 +111,67 @@
 
 ### Запуск через Docker Compose
 
-1. Соберите проект:
-   ```
-   ./mvnw clean package -DskipTests
-   ```
-
-2. Запустите приложение с помощью Docker Compose:
-   ```
-   docker-compose up -d
+1. Создайте файл `.env` на основе шаблона:
+   ```powershell
+   Copy-Item .env.example .env
    ```
 
-3. Приложение будет доступно по адресу: http://localhost:8080
-   Frontend интерфейс: http://localhost
+   Замените значения `change-me` в `.env` на собственные credentials.
+
+2. Соберите проект:
+   ```
+   .\mvnw.cmd clean package -DskipTests
+   ```
+
+3. Запустите приложение с помощью Docker Compose:
+   ```
+   docker compose up -d
+   ```
+
+4. Сервисы будут доступны по адресам:
+   - Frontend: http://localhost
+   - Backend API через frontend: http://localhost/api
+   - Backend напрямую: http://localhost:8080
+   - Swagger UI: http://localhost:8080/swagger-ui/index.html
+   - RustFS Console: http://localhost:9001
+   - RustFS S3 API: http://localhost:9000
+
+   Для входа в RustFS Console используйте `RUSTFS_ACCESS_KEY` и `RUSTFS_SECRET_KEY` из `.env`.
+
+   Frontend использует относительный адрес API. Nginx внутри frontend-контейнера
+   проксирует запросы `/api/*` в Docker-сервис `app:8080`. Поэтому браузеру не нужно
+   разрешать имя `app`, доступное только внутри Docker Compose-сети.
 
 ### Запуск для разработки
 
-1. Запустите необходимые сервисы через Docker Compose:
-   ```
-   docker-compose up -d postgres redis minio
+1. Создайте локальный файл окружения:
+   ```powershell
+   Copy-Item .env.example .env
    ```
 
-2. Запустите Spring Boot приложение:
+   Для запуска Spring Boot вне Docker приложение использует значения из `.env`.
+
+2. Запустите необходимые сервисы через Docker Compose:
    ```
-   ./mvnw spring-boot:run
+   docker compose up -d db redis rustfs
    ```
+
+3. Запустите Spring Boot приложение:
+   ```
+   .\mvnw.cmd spring-boot:run
+   ```
+
+При запуске в Docker `.env` передаётся контейнеру через `env_file`, а Docker-профиль
+использует внутренние адреса `db`, `redis` и `rustfs`. При запуске приложения напрямую
+используются локальные адреса `localhost` из `.env`.
 
 ## 🔧Конфигурация
 
 Основные настройки находятся в файлах:
 - `application.properties` - настройки для локальной разработки
 - `application-docker.properties` - настройки для запуска в Docker
+- `.env.example` - шаблон переменных окружения
+- `.env` - локальные credentials, не коммитится в репозиторий
 
 ## 📋Тестирование
 
@@ -150,7 +181,7 @@
 
 Для запуска тестов используйте:
 ```
-./mvnw test
+.\mvnw.cmd test
 ```
 
 ## 📝Лицензия

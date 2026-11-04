@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+
+rustfs-data/
+pgdata/
+.git/
+.idea/
+roadmap-cloud-storage-frontend/node_modules/
